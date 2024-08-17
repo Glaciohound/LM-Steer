@@ -15,7 +15,16 @@ Language models (LMs) automatically learn word embeddings during pre-training on
 
 <img src="assets/detoxification.jpg" alt="Image 1" width="45%" style="vertical-align: top;">
 On tasks such as language model detoxification and sentiment control, LM-Steers can achieve comparable or superior performance compared with state-of-the-art controlled generation methods while maintaining a better balance with generation quality.
+
+<p align="center">
+  <img src="assets/dimensions.jpg" alt="Image 1" width="65%">
+  <img src="assets/keywords.jpg" alt="Image 2" width="34%">
+</p>
+
 The learned LM-Steer serves as a lens in text styles: it reveals that word embeddings are interpretable when associated with language model generations, and can highlight text spans that most indicate the style differences.
+
+<img src="assets/switch_transfer.jpg" alt="Image 1" width="65%">
+
 A LM-Steer is transferrable between different language models by an explicit-form calculation.
 
 <p align="center">
