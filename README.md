@@ -1,13 +1,45 @@
-# LM-Steer
+# LM-Steer: Word Embeddings Are Steers for Language Models
 Official Code Repository for the "LM-Steer" Paper
 "Word Embeddings Are Steers for Language Models".
 
 Paper link: [arXiv:2305.12798](https://arxiv.org/abs/2305.12798)
-(Originally named "LM-Switch: Lightweight Language Model Conditioning in Word Embedding Space")
 
 
-## Abstract
-Language models (LMs) automatically learn word embeddings during pre-training on language corpora. Although word embeddings are usually interpreted as feature vectors for individual words, their roles in language model generation remain underexplored. In this work, we theoretically and empirically revisit output word embeddings and find that their linear transformations are equivalent to steering language model generation styles. We name such steers LM-Steers and find them existing in LMs of all sizes. It requires learning parameters equal to 0.2\% of the original LMs' size for steering each style. On tasks such as language model detoxification and sentiment control, LM-Steers can achieve comparable or superior performance compared with state-of-the-art controlled generation methods while maintaining a better balance with generation quality. The learned LM-Steer serves as a lens in text styles: it reveals that word embeddings are interpretable when associated with language model generations, and can highlight text spans that most indicate the style differences. A LM-Steer is transferrable between different language models by an explicit-form calculation. One can also continuously steer LMs simply by scaling the LM-Steer, or compose multiple LM-Steers by adding their transformations.
+## Introduction
+
+
+![](assets/overview_fig.jpg)
+
+Language models (LMs) automatically learn word embeddings during pre-training on language corpora. Although word embeddings are usually interpreted as feature vectors for individual words, their roles in language model generation remain underexplored. In this work, we theoretically and empirically revisit output word embeddings and find that their linear transformations are equivalent to steering language model generation styles. We name such steers LM-Steers and find them existing in LMs of all sizes. It requires learning parameters equal to 0.2\% of the original LMs' size for steering each style.
+
+
+<img src="assets/detoxification.jpg" alt="Image 1" width="45%" style="vertical-align: top;">
+On tasks such as language model detoxification and sentiment control, LM-Steers can achieve comparable or superior performance compared with state-of-the-art controlled generation methods while maintaining a better balance with generation quality.
+The learned LM-Steer serves as a lens in text styles: it reveals that word embeddings are interpretable when associated with language model generations, and can highlight text spans that most indicate the style differences.
+A LM-Steer is transferrable between different language models by an explicit-form calculation.
+
+<p align="center">
+  <img src="assets/linear.jpg" alt="Image 1" width="45%">
+  <img src="assets/compositional.jpg" alt="Image 2" width="45%">
+</p>
+
+
+One can also continuously steer LMs simply by scaling the LM-Steer, or compose multiple LM-Steers by adding their transformations.
+
+
+## Table of Contents
+
+- [Requirements](#requirements)
+- [Usage](#usage)
+  - [1. Preparing Data](#1-preparing-data)
+  - [2. Training and Evaluation](#2-training-and-evaluation)
+    - [2.1. LM-Steer for Detoxification](#21-lm-steer-for-detoxification)
+    - [2.2. LM-Steer for Sentiment Control](#22-lm-steer-for-sentiment-control)
+  - [3. Other Analytical Experiments](#3-other-analytical-experiments)
+    - [3.1. LM-Steer Interpretation](#31-lm-steer-interpretation)
+    - [3.2. LM-Steer Transfer](#32-lm-steer-transfer)
+    - [3.3. LM-Steer Composition and Continuous Steering](#33-lm-steer-composition-and-continuous-steering)
+- [Citation](#citation)
 
 
 ## Requirements
