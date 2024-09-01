@@ -1,8 +1,5 @@
 # LM-Steer: Word Embeddings Are Steers for Language Models
-Official Code Repository for the "LM-Steer" Paper
-"Word Embeddings Are Steers for Language Models".
-
-Paper link: [arXiv:2305.12798](https://arxiv.org/abs/2305.12798)
+Official Code Repository for the paper ["**LM-Steer: Word Embeddings Are Steers for Language Models**"](https://arxiv.org/abs/2305.12798) (**ACL 2024 Outstanding Paper Award**) by Chi Han, Jialiang Xu, Manling Li, Yi Fung, Chenkai Sun, Nan Jiang, Tarek Abdelzaher, Heng Ji.
 
 
 ## Introduction
@@ -103,13 +100,19 @@ mkdir -p logs/$TRIAL
 PYTHONPATH=. python experiments/training/train.py \
     --dataset_name toxicity \
     --data_dir data/toxicity/jigsaw-unintended-bias-in-toxicity-classification \
+    --ckpt_name logs/$TRIAL/checkpoint.pt \
+    --model gpt2-large --cuda \
+    --adaptor_class multiply --num_steers 2 --dummy_steer 1 --rank 1000 \
+    --batch_size 32 --max_length 256 \
+    --n_steps 1000 --lr 1e-2
+
+PYTHONPATH=. python experiments/training/generate.py \
     --eval_file data/prompts/nontoxic_prompts-10k.jsonl \
     --output_file logs/$TRIAL/predictions.jsonl \
-    --ckpt_name logs/$TRIAL/checkpoint.pt\
-    --model gpt2-large \
-    --adaptor_class multiply --num_steers 2 --dummy_steer --rank 1000 \
-    --cuda --batch_size 32 --max_length 256 --verbose \
-    --n_steps 1000 --lr 1e-2 --steer_values 5 1
+    --ckpt_name logs/$TRIAL/checkpoint.pt \
+    --model gpt2-large --cuda \
+    --adaptor_class multiply --num_steers 2 --rank 1000 \
+    --max_length 256 --verbose --steer_values 5 1
 
 ```
 
@@ -151,13 +154,19 @@ source=positive
 control=-5
 PYTHONPATH=. python experiments/training/train.py \
     --dataset_name sentiment-sst5 \
+    --ckpt_name logs/$TRIAL/checkpoint.pt \
+    --model gpt2-large --cuda \
+    --adaptor_class multiply --num_steers 2 --dummy_steer 1 --rank 1000 \
+    --batch_size 32 --max_length 256 \
+    --n_steps 1000 --lr 1e-2 --regularization 1e-6 --epsilon 1e-3
+PYTHONPATH=. python experiments/training/generate.py \
     --eval_file data/prompts/sentiment_prompts-10k/${source}_prompts.jsonl \
     --output_file logs/$TRIAL/predictions-${source}_${control}.jsonl \
     --ckpt_name logs/$TRIAL/checkpoint.pt \
-    --model gpt2-large \
-    --adaptor_class multiply --num_steers 2 --dummy_steer --rank 1000 \
-    --cuda --batch_size 32 --max_length 256 --verbose \
-    --n_steps 1000 --lr 1e-2 --regularization 1e-6 --epsilon 1e-3 --steer_values ${control} 1 --top_p 0.9
+    --model gpt2-large --cuda \
+    --adaptor_class multiply --num_steers 2 --rank 1000 \
+    --max_length 256 --verbose --steer_values ${control} 1 --top_p 0.9
+
 
 python experiments/evaluation/evaluate.py \
     --generations_file logs/$TRIAL/predictions-${source}_${control}.jsonl \
