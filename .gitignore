@@ -161,5 +161,6 @@ cython_debug/
 
 # repo-specific
 **/.DS_Store
-_logs/
 _logs
+_logs/
+checkpoints/

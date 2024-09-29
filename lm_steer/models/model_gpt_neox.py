@@ -1,13 +1,13 @@
 import torch
-import torch.nn as nn
 from transformers import GPTNeoXForCausalLM, AutoTokenizer
 
 from .model_utils import Hack_no_grad
 from .steers import Projected_Adaptor
+from .model_base import LMSteerBase
 from lm_steer.utils import set_seed
 
 
-class Switching_GPTNeoXModel(nn.Module):
+class Switching_GPTNeoXModel(LMSteerBase):
     def __init__(self, model_name, adapted_component, adaptor_class,
                  num_steers, rank, epsilon, init_var,
                  low_resource_mode):
