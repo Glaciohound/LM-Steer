@@ -1,6 +1,7 @@
 import torch
 from transformers import pipeline
 
+
 from .model_utils import Hack_no_grad
 from .steers import Projected_Adaptor
 from .model_base import LMSteerBase
@@ -12,9 +13,9 @@ class Switching_GPTNeoModel(LMSteerBase):
                  low_resource_mode):
         super().__init__()
         self.adapted_component = adapted_component
-        self.generator = pipeline('text-generation', model=model_name)
-        self.tokenizer = self.generator.tokenizer
-        self.model = self.generator.model
+        self.pipeline = pipeline('text-generation', model=model_name)
+        self.model = self.pipeline.model
+        self.tokenizer = self.pipeline.tokenizer
         self.tokenizer.pad_token = self.tokenizer.eos_token
         self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
         self.init_var = init_var
@@ -39,28 +40,3 @@ class Switching_GPTNeoModel(LMSteerBase):
             self.model.transformer.set_input_embeddings(self.steer)
         else:
             raise NotImplementedError()
-
-    def forward(self, input_ids, attention_mask, steer_values):
-        self.steer.set_value(steer_values)
-        output = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            labels=input_ids)
-        return output
-
-    def parameters(self):
-        return self.steer.parameters()
-
-    def state_dict(self):
-        return self.steer.state_dict()
-
-    def load_state_dict(self, state_dict):
-        self.steer.load_state_dict(state_dict)
-
-    def to_device(self, device):
-        self.generator.device = device
-        self.model.to(device)
-        self.device = device
-
-    def regularization_term(self):
-        return self.steer.regularization_term()

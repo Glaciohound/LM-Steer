@@ -4,7 +4,6 @@ from transformers import GPTNeoXForCausalLM, AutoTokenizer
 from .model_utils import Hack_no_grad
 from .steers import Projected_Adaptor
 from .model_base import LMSteerBase
-from lm_steer.utils import set_seed
 
 
 class Switching_GPTNeoXModel(LMSteerBase):
@@ -42,30 +41,6 @@ class Switching_GPTNeoXModel(LMSteerBase):
         else:
             raise NotImplementedError()
 
-    def forward(self, input_ids, attention_mask, steer_values):
-        self.steer.set_value(steer_values)
-        output = self.model(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            labels=input_ids)
-        return output
-
-    def parameters(self):
-        return self.steer.parameters()
-
-    def state_dict(self):
-        return self.steer.state_dict()
-
-    def load_state_dict(self, state_dict):
-        self.steer.load_state_dict(state_dict)
-
-    def to_device(self, device):
-        self.model.to(device)
-        self.device = device
-
-    def regularization_term(self):
-        return self.steer.regularization_term()
-
     def generate(self, prompt, steer_values, min_length=20, max_length=100,
                  seed=None, num_beams=1, num_beam_groups=1, do_sample=True,
                  temperature=1, top_p=1):
@@ -76,30 +51,6 @@ class Switching_GPTNeoXModel(LMSteerBase):
         max_length: maximum generation length
         seed: seed for generation. None if not specified.
         '''
-        if seed is not None:
-            set_seed(seed)
-        steer_values = torch.Tensor(steer_values).to(
-            self.device)
-        if self.low_resource_mode:
-            fp16 = torch.float16
-            steer_values = steer_values.to(fp16)
-            self.steer.projector1.data = self.steer.projector1.to(fp16)
-            self.steer.projector2.data = self.steer.projector2.to(fp16)
-        self.steer.set_value(steer_values[None])
-        with torch.no_grad():
-            input_ids = self.tokenizer(
-                prompt, return_tensors="pt").input_ids.to(self.device)
-            gen_tokens = self.model.generate(
-                input_ids,
-                num_beams=num_beams, num_beam_groups=num_beam_groups,
-                do_sample=do_sample, temperature=temperature, top_p=top_p,
-                min_length=min_length, max_length=max_length,
-                pad_token_id=self.tokenizer.pad_token_id)
-            text = self.tokenizer.batch_decode(gen_tokens)[0]
-
-        # recovering
-        if self.low_resource_mode:
-            fp32 = torch.float32
-            self.steer.projector1.data = self.steer.projector1.to(fp32)
-            self.steer.projector2.data = self.steer.projector2.to(fp32)
-        return text
+        return super().generate_low_resource(
+            prompt, steer_values, min_length, max_length, seed,
+            num_beams, num_beam_groups, do_sample, temperature, top_p)

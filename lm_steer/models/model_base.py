@@ -26,8 +26,8 @@ class LMSteerBase(nn.Module):
         if isinstance(comparing_steer_values, list):
             comparing_steer_values = \
                 torch.Tensor(comparing_steer_values).to(self.device)
-        if (comparing_steer_values[0] - comparing_steer_values[1]
-                ).abs().sum() <= 0.2:
+        if (comparing_steer_values[0] - comparing_steer_values[1]).abs().sum()\
+                <= 0.2:
             return [(prompt, None)]
         tokenized = self.tokenizer(
             prompt, return_tensors="pt",
@@ -109,7 +109,7 @@ class LMSteerBase(nn.Module):
         )
         loss_token = loss_token.reshape(bins + 1, length - 1)
         loss = loss_token.mean(-1)[:-1]
-        dist = ((- loss + loss.mean()) * 100).softmax(0)
+        dist = ((- loss + loss.mean()) * 10).softmax(0)
         dist_list = list(zip(
             [
                 min_value + (max_value - min_value) / (bins - 1) * bin_i
@@ -162,12 +162,77 @@ class LMSteerBase(nn.Module):
             self.device)
         self.steer.set_value(steer_values[None])
         with torch.no_grad():
-            text = self.generator(
-                prompt, num_beams=num_beams, num_beam_groups=num_beam_groups,
+            inputs = self.tokenizer(
+                prompt, return_tensors="pt").to(self.device)
+            text = self.model.generate(
+                **inputs,
+                num_beams=num_beams, num_beam_groups=num_beam_groups,
                 do_sample=do_sample, temperature=temperature, top_p=top_p,
                 min_length=min_length, max_length=max_length,
                 pad_token_id=self.tokenizer.pad_token_id,
             )
-            text = text[0]["generated_text"]
+            text = self.tokenizer.decode(text[0], skip_special_tokens=True)
 
         return text
+
+    def generate_low_resource(
+        self, prompt, steer_values, min_length=20, max_length=100,
+        seed=None, num_beams=1, num_beam_groups=1, do_sample=True,
+        temperature=1, top_p=1
+    ):
+        '''
+        prompt: a string
+        steer_values
+        min_length: minimum generation length
+        max_length: maximum generation length
+        seed: seed for generation. None if not specified.
+        '''
+        if seed is not None:
+            set_seed(seed)
+        steer_values = torch.Tensor(steer_values).to(
+            self.device)
+        fp16 = torch.float16
+        steer_values = steer_values.to(fp16)
+        self.steer.projector1.data = self.steer.projector1.to(fp16)
+        self.steer.projector2.data = self.steer.projector2.to(fp16)
+        self.steer.set_value(steer_values[None])
+        with torch.no_grad():
+            input_ids = self.tokenizer(
+                prompt, return_tensors="pt").input_ids.to(self.device)
+            gen_tokens = self.model.generate(
+                input_ids,
+                num_beams=num_beams, num_beam_groups=num_beam_groups,
+                do_sample=do_sample, temperature=temperature, top_p=top_p,
+                min_length=min_length, max_length=max_length,
+                pad_token_id=self.tokenizer.pad_token_id)
+            text = self.tokenizer.batch_decode(gen_tokens)[0]
+
+        # recovering
+        fp32 = torch.float32
+        self.steer.projector1.data = self.steer.projector1.to(fp32)
+        self.steer.projector2.data = self.steer.projector2.to(fp32)
+        return text
+
+    def state_dict(self):
+        return self.steer.state_dict()
+
+    def load_state_dict(self, state_dict):
+        self.steer.load_state_dict(state_dict)
+
+    def parameters(self):
+        return self.steer.parameters()
+
+    def to_device(self, device):
+        self.model.to(device)
+        self.device = device
+
+    def regularization_term(self):
+        return self.steer.regularization_term()
+
+    def forward(self, input_ids, attention_mask, steer_values):
+        self.steer.set_value(steer_values)
+        output = self.model(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            labels=input_ids)
+        return output
