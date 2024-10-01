@@ -6,10 +6,7 @@
 
 Official Code Repository for the paper ["**LM-Steer: Word Embeddings Are Steers for Language Models**"](https://arxiv.org/abs/2305.12798) (**ACL 2024 Outstanding Paper Award**) by Chi Han, Jialiang Xu, Manling Li, Yi Fung, Chenkai Sun, Nan Jiang, Tarek Abdelzaher, Heng Ji.
 
-Links:
-
-[**Arxiv Preprint**](https://arxiv.org/abs/2305.12798),
-[**Live Demo**](https://huggingface.co/spaces/Glaciohound/LM-Steer)
+[**Live Demo**](https://huggingface.co/spaces/Glaciohound/LM-Steer) | [**Paper**](https://arxiv.org/abs/2305.12798) | [**Slides**](assets/slides.pdf) | [**Poster**](assets/poster.pdf)
 
 
 ## Introduction

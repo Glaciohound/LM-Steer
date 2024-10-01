@@ -48,7 +48,7 @@ def word_embedding_space_analysis(
             for t in side_tokens:
                 word = tokenizer.decode([t])
                 if (
-                    len(word) > 2 and not word[0].isalpha() and
+                    len(word) > 2 and word[0] == " " and
                     word[1:].isalpha() and word[1:].lower().islower()
                 ):
                     word = word[1:]
@@ -65,7 +65,7 @@ def word_embedding_space_analysis(
         data,
         columns=["Words Contributing to the Style"],
         index=[f"Dim#{_i}" for _i in range(n_dim)],
-    )
+    ), D
 
 
 # rgb tuple to hex color
@@ -77,6 +77,8 @@ def main():
     # set up the page
     random.seed(0)
     nltk.download('words')
+    dimension_names = ["Detoxification", "Sentiment"]
+    dimension_colors = ["#1f77b4", "#ff7f0e"]
     title = "LM-Steer: Word Embeddings Are Steers for Language Models"
     st.set_page_config(
         layout="wide",
@@ -92,8 +94,12 @@ def main():
     https://github.com/Glaciohound/LM-Steer.
     '''
     st.subheader("Overview")
-    st.image('https://raw.githubusercontent.com/Glaciohound/LM-Steer'
-             '/refs/heads/main/assets/overview_fig.jpg')
+    col1, col2, col3 = st.columns([1, 5, 1])
+    col2.image(
+        'https://raw.githubusercontent.com/Glaciohound/LM-Steer'
+        '/refs/heads/main/assets/overview_fig.jpg',
+        caption="LM-Steer Method Overview"
+    )
     '''
     Language models (LMs) automatically learn word embeddings during
     pre-training on language corpora. Although word embeddings are usually
@@ -168,7 +174,7 @@ def main():
         "Detoxification Strength (Toxic ↔︎ Clean)",
         -steer_range, steer_range, 0.0,
         steer_interval)
-    max_length = col3.number_input("Max length", 20, 200, 20, 20)
+    max_length = col3.number_input("Max length", 20, 300, 20, 40)
     col1, col2, col3, _ = st.columns(4)
     randomness = col2.checkbox("Random sampling", value=False)
 
@@ -191,8 +197,9 @@ def main():
                 do_sample=True,
                 top_p=0.9,
             )
-    st.session_state.analyzed_text = \
-        st.text_area("Generated text:", st.session_state.output, height=200)
+
+    with st.chat_message("human"):
+        st.write(st.session_state.output)
 
     # Analysing the sentence
     st.divider()
@@ -202,17 +209,19 @@ def main():
     LM-Steer also serves as a probe for analyzing the text. It can be used to
     analyze the sentiment and detoxification of the text. Now, we proceed and
     use LM-Steer to analyze the text in the box above. You can also modify the
-    text or use your own. Please note that these two dimensions can be
+    text or use your own. You may observe that these two dimensions can be
     entangled, as a negative sentiment may also detoxify the text.
     '''
+    st.session_state.analyzed_text = \
+        st.text_area("Text to analyze:", st.session_state.output, height=200)
     if st.session_state.get("analyzed_text", "") != "" and \
             st.button("Analyze the text above", type="primary"):
         col1, col2 = st.columns(2)
         for name, col, dim, color, axis_annotation in zip(
-            ["Sentiment", "Detoxification"],
+            dimension_names,
             [col1, col2],
             [2, 0],
-            ["#ff7f0e", "#1f77b4"],
+            dimension_colors,
             ["Negative ↔︎ Positive", "Toxic ↔︎ Clean"]
         ):
             with st.spinner(f"Analyzing {name}..."):
@@ -269,10 +278,10 @@ def main():
     style. This analysis can be used to understand the word embedding space
     and how it steers the model's generation.
     '''
-    for dimension in ["Detoxification", "Sentiment"]:
+    for dimension, color in zip(dimension_names, dimension_colors):
         f'##### {dimension} Word Dimensions'
         dim = 2 if dimension == "Sentiment" else 0
-        analysis_result = word_embedding_space_analysis(
+        analysis_result, D = word_embedding_space_analysis(
             model_name, dim)
         with st.expander("Show the analysis results"):
             color_scale = 7
@@ -291,6 +300,25 @@ def main():
                     for i in range(len(x))
                 ]
             ))
+            embeddings = model.steer.lm_head.weight
+            dim1 = embeddings.matmul(D[0]).tolist()
+            dim2 = embeddings.matmul(D[1]).tolist()
+            words = [tokenizer.decode([i]) for i in range(len(embeddings))]
+            scatter_chart = [
+                (_d1, _d2, _word)
+                for _d1, _d2, _word in zip(dim1, dim2, words)
+                if len(_word) > 2 and _word[0] == " " and
+                _word[1:].isalpha() and _word[1:].lower().islower()
+            ]
+            scatter_chart = pd.DataFrame(
+                scatter_chart,
+                columns=["Dim1", "Dim2", "Word"]
+            )
+            st.scatter_chart(
+                scatter_chart, x="Dim1", y="Dim2",
+                color="Word",
+                # color=color,
+                height=1000, size=50,)
 
 
 if __name__ == "__main__":
