@@ -54,20 +54,6 @@ class Switching_GPTJModel(LMSteerBase):
         else:
             raise NotImplementedError()
 
-    def generate(self, prompt, steer_values, min_length=20, max_length=100,
-                 seed=None, num_beams=1, num_beam_groups=1, do_sample=True,
-                 temperature=1, top_p=1):
-        '''
-        prompt: a string
-        steer_values
-        min_length: minimum generation length
-        max_length: maximum generation length
-        seed: seed for generation. None if not specified.
-        '''
-        return super().generate_low_resource(
-            prompt, steer_values, min_length, max_length, seed,
-            num_beams, num_beam_groups, do_sample, temperature, top_p)
-
     def generate_multiple(
             self, prompts, steer_values, min_length=20, max_length=100,
             seed=None):

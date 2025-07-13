@@ -37,12 +37,11 @@ class LMSteerBase(nn.Module):
         attention_mask = torch.LongTensor(tokenized["attention_mask"]).to(
             self.device)
         attention_mask = attention_mask.expand(2, -1)
-        self.steer.set_value(comparing_steer_values)
         with torch.no_grad():
-            output = self.model(
+            output = self(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                labels=input_ids)
+                steer_values=comparing_steer_values)
         length = input_ids.shape[1]
         loss_token = F.cross_entropy(
             output.logits[:, :-1].reshape((2)*(length-1), -1),
@@ -95,12 +94,11 @@ class LMSteerBase(nn.Module):
             steer_values[bin_i, steer_dim] = (
                 min_value + (max_value - min_value) / (bins - 1) * bin_i
             )
-        self.steer.set_value(steer_values)
         with torch.no_grad():
-            output = self.model(
+            output = self(
                 input_ids=input_ids,
                 attention_mask=attention_mask,
-                labels=input_ids)
+                steer_values=steer_values)
         length = input_ids.shape[1]
         loss_token = F.cross_entropy(
             output.logits[:, :-1].reshape((bins+1)*(length-1), -1),
@@ -160,6 +158,11 @@ class LMSteerBase(nn.Module):
             set_seed(seed)
         steer_values = torch.Tensor(steer_values).to(
             self.device)
+        if self.low_resource_mode:
+            fp16 = torch.float16
+            steer_values = steer_values.to(fp16)
+            self.steer.projector1.data = self.steer.projector1.to(fp16)
+            self.steer.projector2.data = self.steer.projector2.to(fp16)
         self.steer.set_value(steer_values[None])
         with torch.no_grad():
             inputs = self.tokenizer(
@@ -173,44 +176,10 @@ class LMSteerBase(nn.Module):
             )
             text = self.tokenizer.decode(text[0], skip_special_tokens=True)
 
-        return text
-
-    def generate_low_resource(
-        self, prompt, steer_values, min_length=20, max_length=100,
-        seed=None, num_beams=1, num_beam_groups=1, do_sample=True,
-        temperature=1, top_p=1
-    ):
-        '''
-        prompt: a string
-        steer_values
-        min_length: minimum generation length
-        max_length: maximum generation length
-        seed: seed for generation. None if not specified.
-        '''
-        if seed is not None:
-            set_seed(seed)
-        steer_values = torch.Tensor(steer_values).to(
-            self.device)
-        fp16 = torch.float16
-        steer_values = steer_values.to(fp16)
-        self.steer.projector1.data = self.steer.projector1.to(fp16)
-        self.steer.projector2.data = self.steer.projector2.to(fp16)
-        self.steer.set_value(steer_values[None])
-        with torch.no_grad():
-            input_ids = self.tokenizer(
-                prompt, return_tensors="pt").input_ids.to(self.device)
-            gen_tokens = self.model.generate(
-                input_ids,
-                num_beams=num_beams, num_beam_groups=num_beam_groups,
-                do_sample=do_sample, temperature=temperature, top_p=top_p,
-                min_length=min_length, max_length=max_length,
-                pad_token_id=self.tokenizer.pad_token_id)
-            text = self.tokenizer.batch_decode(gen_tokens)[0]
-
-        # recovering
-        fp32 = torch.float32
-        self.steer.projector1.data = self.steer.projector1.to(fp32)
-        self.steer.projector2.data = self.steer.projector2.to(fp32)
+        if self.low_resource_mode:
+            fp32 = torch.float32
+            self.steer.projector1.data = self.steer.projector1.to(fp32)
+            self.steer.projector2.data = self.steer.projector2.to(fp32)
         return text
 
     def state_dict(self):
@@ -230,9 +199,18 @@ class LMSteerBase(nn.Module):
         return self.steer.regularization_term()
 
     def forward(self, input_ids, attention_mask, steer_values):
+        if self.low_resource_mode:
+            fp16 = torch.float16
+            steer_values = steer_values.to(fp16)
+            self.steer.projector1.data = self.steer.projector1.to(fp16)
+            self.steer.projector2.data = self.steer.projector2.to(fp16)
         self.steer.set_value(steer_values)
         output = self.model(
             input_ids=input_ids,
             attention_mask=attention_mask,
             labels=input_ids)
+        if self.low_resource_mode:
+            fp32 = torch.float32
+            self.steer.projector1.data = self.steer.projector1.to(fp32)
+            self.steer.projector2.data = self.steer.projector2.to(fp32)
         return output

@@ -40,8 +40,8 @@ def word_embedding_space_analysis(
     select_words = 20
     n_dim = 10
     for _i in range(n_dim):
-        left_tokens = embeddings.matmul(D[_i]).argsort()[-top:].flip(0)
-        right_tokens = embeddings.matmul(D[_i]).argsort()[:top]
+        left_tokens = embeddings.float().matmul(D[_i]).argsort()[-top:].flip(0)
+        right_tokens = embeddings.float().matmul(D[_i]).argsort()[:top]
 
         def filter_words(side_tokens):
             output = []
@@ -77,8 +77,8 @@ def main():
     # set up the page
     random.seed(0)
     nltk.download('words')
-    dimension_names = ["Detoxification", "Sentiment"]
-    dimension_colors = ["#1f77b4", "#ff7f0e"]
+    dimension_names = ["Sentiment", "Detoxification"]
+    dimension_colors = ["#ff7f0e", "#1f77b4"]
     title = "LM-Steer: Word Embeddings Are Steers for Language Models"
     st.set_page_config(
         layout="wide",
@@ -135,18 +135,18 @@ def main():
             "EleutherAI/pythia-70m",
             "EleutherAI/pythia-160m",
             "EleutherAI/pythia-410m",
-            # "EleutherAI/pythia-1b",
-            # "EleutherAI/pythia-1.4b",
-            # "EleutherAI/pythia-2.8b",
-            # "EleutherAI/pythia-6.9b",
-            # "EleutherAI/gpt-j-6B",
+            "EleutherAI/pythia-1b",
+            "EleutherAI/pythia-1.4b",
+            "EleutherAI/pythia-2.8b",
+            "EleutherAI/pythia-6.9b",
+            "EleutherAI/gpt-j-6B",
         ],
     )
-    # low_resource_mode = True if st.session_state.model_name in (
-    #     "EleutherAI/pythia-1.4b", "EleutherAI/pythia-2.8b",
-    #     "EleutherAI/pythia-6.9b", "EleutherAI/gpt-j-6B",
-    # ) else False
-    low_resource_mode = False
+    low_resource_mode = True if model_name in (
+        "EleutherAI/pythia-1.4b", "EleutherAI/pythia-2.8b",
+        "EleutherAI/pythia-6.9b", "EleutherAI/gpt-j-6B",
+    ) and torch.cuda.is_available() else False
+    # low_resource_mode = False
     model, tokenizer = st_get_model(
         model_name, low_resource_mode)
     st.session_state.model = model
@@ -301,8 +301,8 @@ def main():
                 ]
             ))
             embeddings = model.steer.lm_head.weight
-            dim1 = embeddings.matmul(D[0]).tolist()
-            dim2 = embeddings.matmul(D[1]).tolist()
+            dim1 = embeddings.float().matmul(D[0]).tolist()
+            dim2 = embeddings.float().matmul(D[1]).tolist()
             words = [tokenizer.decode([i]) for i in range(len(embeddings))]
             scatter_chart = [
                 (_d1, _d2, _word)
